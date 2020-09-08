@@ -1,5 +1,0 @@
-8 files
-2 teams per filed
-2 agents per team
-continuous action space
-3 float actions [forward, sidways, rotation]

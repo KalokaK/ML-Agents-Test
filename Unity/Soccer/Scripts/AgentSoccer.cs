@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Random = System.Random;
 using Unity.MLAgents;
 using Unity.MLAgents.Policies;
 
@@ -14,8 +15,8 @@ public class AgentSoccer : Agent
     // * opposing player
     public enum Team
     {
-        Blue = 0,
-        Purple = 1
+        Blue = 1,
+        Purple = 0
     }
 
     public enum Position
@@ -25,7 +26,7 @@ public class AgentSoccer : Agent
         Generic
     }
 
-    [HideInInspector]
+
     public Team team;
     float m_KickPower;
     int m_PlayerIndex;
@@ -50,18 +51,18 @@ public class AgentSoccer : Agent
 
     EnvironmentParameters m_ResetParams;
 
+    public static Random random = new Random();
+
     public override void Initialize()
     {
         m_Existential = 1f / MaxStep;
         m_BehaviorParameters = gameObject.GetComponent<BehaviorParameters>();
-        if (m_BehaviorParameters.TeamId == (int)Team.Blue)
+        if (team == Team.Blue)
         {
-            team = Team.Blue;
             m_Transform = new Vector3(transform.position.x - 4f, .5f, transform.position.z);
         }
         else
         {
-            team = Team.Purple;
             m_Transform = new Vector3(transform.position.x + 4f, .5f, transform.position.z);
         }
         if (position == Position.Goalie)
@@ -107,10 +108,10 @@ public class AgentSoccer : Agent
         var rightAxis = act[1];
         var rotateAxis = act[2];
 
-        dirToGo = transform.forward * forwardAxis;
-        dirToGo = transform.right * rightAxis;
-        rotateDir = transform.up * rotateAxis;
-        
+        dirToGo += transform.forward * m_ForwardSpeed * Convert.ToSingle(System.Math.Tanh(forwardAxis));
+        dirToGo += transform.right * m_LateralSpeed * Convert.ToSingle(System.Math.Tanh(rightAxis));
+        rotateDir =  transform.up * Convert.ToSingle(System.Math.Tanh(rotateAxis));
+
         if (forwardAxis >= 0)
         {
             m_KickPower = 1f;
@@ -137,7 +138,8 @@ public class AgentSoccer : Agent
         else
         {
             // Existential penalty cumulant for Generic
-            timePenalty -= m_Existential;
+            timePenalty -= m_Existential / MaxStep;
+            AddReward(-m_Existential);
         }
         MoveAgent(vectorAction);
     }
@@ -146,13 +148,14 @@ public class AgentSoccer : Agent
     {
         Array.Clear(actionsOut, 0, actionsOut.Length);
         //forward
+        
         if (Input.GetKey(KeyCode.W))
         {
             actionsOut[0] = 1f;
         }
         if (Input.GetKey(KeyCode.S))
         {
-            actionsOut[0] = 2f;
+            actionsOut[0] = -1f;
         }
         //rotate
         if (Input.GetKey(KeyCode.A))
@@ -161,7 +164,7 @@ public class AgentSoccer : Agent
         }
         if (Input.GetKey(KeyCode.D))
         {
-            actionsOut[2] = 2f;
+            actionsOut[2] = -1f;
         }
         //right
         if (Input.GetKey(KeyCode.E))
@@ -170,7 +173,7 @@ public class AgentSoccer : Agent
         }
         if (Input.GetKey(KeyCode.Q))
         {
-            actionsOut[1] = 2f;
+            actionsOut[1] = -1f;
         }
     }
     /// <summary>
@@ -185,7 +188,7 @@ public class AgentSoccer : Agent
         }
         if (c.gameObject.CompareTag("ball"))
         {
-            AddReward(.2f * m_BallTouch);
+            AddReward(3f * m_BallTouch);
             var dir = c.contacts[0].point - transform.position;
             dir = dir.normalized;
             c.gameObject.GetComponent<Rigidbody>().AddForce(dir * force);

@@ -1,3 +1,6 @@
 {
-  "EPISODES": 10000
+  "EPISODES": 10000,
+  "MONO_BEHAVIOUR": true,
+  "N_TRAJECTORIES": 5,
+  "SIGMA": 5
 }
